@@ -31,5 +31,5 @@ jobs:
           password: ${{ secrets.GH_TOKEN }}
 
       - name: Build Docker image
-        run: docker build -t ghcr.io/DF-wu/llmcord:latest .
+        run: docker build -t ghcr.io/df-wu/llmcord:latest .
 
