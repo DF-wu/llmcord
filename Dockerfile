@@ -3,8 +3,8 @@ FROM python:3.12-slim
 ARG DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /usr/src/app
-
-COPY requirements.txt .
+# copy all files from the current directory to the container
+COPY . .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
