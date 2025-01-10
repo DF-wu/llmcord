@@ -37,4 +37,4 @@ jobs:
       # Push the Docker image to GHCR
       - name: Push Docker image
         run: |
-          docker push ghcr.io/$REPO_OWNER/idrac-fan-control:latest
+          docker push ghcr.io/df-wu/llmcord:latest
