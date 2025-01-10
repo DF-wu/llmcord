@@ -33,3 +33,8 @@ jobs:
       - name: Build Docker image
         run: docker build -t ghcr.io/df-wu/llmcord:latest .
 
+          
+      # Push the Docker image to GHCR
+      - name: Push Docker image
+        run: |
+          docker push ghcr.io/$REPO_OWNER/idrac-fan-control:latest
