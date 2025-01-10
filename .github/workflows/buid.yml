@@ -34,7 +34,7 @@ jobs:
         run: docker build -t ghcr.io/df-wu/llmcord:latest .
 
           
-      # Push the Docker image to GHCR
+      # Push the Docker image to GHCR.
       - name: Push Docker image
         run: |
           docker push ghcr.io/df-wu/llmcord:latest
