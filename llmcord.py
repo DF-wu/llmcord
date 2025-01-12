@@ -28,7 +28,7 @@ EMBED_COLOR_COMPLETE = discord.Color.dark_green()
 EMBED_COLOR_INCOMPLETE = discord.Color.orange()
 
 STREAMING_INDICATOR = " ⚪"
-EDIT_DELAY_SECONDS = 2  # 增加延遲時間
+EDIT_DELAY_SECONDS = 1
 
 MAX_MESSAGE_NODES = 100
 
