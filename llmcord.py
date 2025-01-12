@@ -10,10 +10,14 @@ import httpx
 from openai import AsyncOpenAI
 import yaml
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s: %(message)s",
-)
+def setup_logging(debug=False):
+    """設定日誌等級和格式"""
+    level = logging.DEBUG if debug else logging.INFO
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
 VISION_MODEL_TAGS = ("gpt-4o", "claude-3", "gemini", "pixtral", "llava", "vision", "vl")
 PROVIDERS_SUPPORTING_USERNAMES = ("openai", "x-ai")
@@ -35,6 +39,7 @@ def get_config(filename="config.yaml"):
 
 
 cfg = get_config()
+setup_logging(cfg.get("debug", False))
 
 if client_id := cfg["client_id"]:
     logging.info(f"\n\nBOT INVITE URL:\nhttps://discord.com/api/oauth2/authorize?client_id={client_id}&permissions=412317273088&scope=bot\n")
@@ -69,6 +74,8 @@ class MsgNode:
 @discord_client.event
 async def on_message(new_msg):
     global msg_nodes, last_task_time
+    
+    logging.debug(f"收到訊息 (ID: {new_msg.id}, 頻道: {new_msg.channel.id})")
 
     is_dm = new_msg.channel.type == discord.ChannelType.private
 
@@ -200,6 +207,8 @@ async def on_message(new_msg):
     kwargs = dict(model=model, messages=messages[::-1], stream=True, extra_body=cfg["extra_api_parameters"])
     try:
         async with new_msg.channel.typing():
+            logging.debug(f"開始生成回應 (模型: {model})")
+            
             async for curr_chunk in await openai_client.chat.completions.create(**kwargs):
                 prev_content = prev_chunk.choices[0].delta.content if prev_chunk != None and prev_chunk.choices[0].delta.content else ""
                 curr_content = curr_chunk.choices[0].delta.content or ""
@@ -244,6 +253,7 @@ async def on_message(new_msg):
                         embed.color = EMBED_COLOR_COMPLETE if msg_split_incoming or is_good_finish else EMBED_COLOR_INCOMPLETE
 
                         edit_task = asyncio.create_task(response_msgs[-1].edit(embed=embed))
+                        logging.debug(f"更新訊息 (ID: {response_msgs[-1].id}, 長度: {len(response_contents[-1])})")
 
                         last_task_time = dt.now().timestamp()
 
@@ -256,8 +266,18 @@ async def on_message(new_msg):
                     msg_nodes[response_msg.id] = MsgNode(next_msg=new_msg)
                     await msg_nodes[response_msg.id].lock.acquire()
 
-    except Exception:
-        logging.exception("Error while generating response")
+    except Exception as e:
+        logging.exception(f"生成回應時發生錯誤: {str(e)}")
+        if not use_plain_responses and response_msgs:
+            try:
+                error_embed = discord.Embed(
+                    description=f"{response_contents[-1]}\n\n⚠️ 錯誤: {str(e)}",
+                    color=discord.Color.red()
+                )
+                await response_msgs[-1].edit(embed=error_embed)
+                logging.debug("已更新錯誤訊息")
+            except Exception as e2:
+                logging.error(f"更新錯誤訊息失敗: {str(e2)}")
 
     for response_msg in response_msgs:
         msg_nodes[response_msg.id].text = "".join(response_contents)
