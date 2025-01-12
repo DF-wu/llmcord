@@ -266,6 +266,9 @@ async def on_message(new_msg):
                     msg_nodes[response_msg.id] = MsgNode(next_msg=new_msg)
                     await msg_nodes[response_msg.id].lock.acquire()
 
+            if edit_task is not None:
+                await edit_task
+
     except Exception as e:
         logging.exception(f"生成回應時發生錯誤: {str(e)}")
         if not use_plain_responses and response_msgs:
