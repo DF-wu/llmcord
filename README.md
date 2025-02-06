@@ -1,6 +1,7 @@
 
-I just set the container auto publish.
-image url: `ghcr.io/df-wu/llmcord:latest`
+I just set the container auto build&publish.
+
+The image url: `ghcr.io/df-wu/llmcord:latest`
 
 
 
