@@ -4,16 +4,23 @@ bot_token:
 client_id: 
 status_message: 
 
-allow_dms: true
-allowed_channel_ids: []
-allowed_role_ids: []
-blocked_user_ids: []
-
 max_text: 100000
 max_images: 5
 max_messages: 25
 
 use_plain_responses: false
+allow_dms: true
+
+permissions:
+  users:
+    allowed_ids: []
+    blocked_ids: []
+  roles:
+    allowed_ids: []
+    blocked_ids: []
+  channels:
+    allowed_ids: []
+    blocked_ids: []
 
 
 # LLM settings:

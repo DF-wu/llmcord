@@ -20,7 +20,7 @@ image url: `ghcr.io/df-wu/llmcord:latest`
   <img src="https://github.com/jakobdylanc/llmcord/assets/38699060/789d49fe-ef5c-470e-b60e-48ac03057443" alt="">
 </p>
 
-llmcord turns Discord into a collaborative LLM frontend. It works with practically any LLM, remote or locally hosted.
+llmcord transforms Discord into a collaborative LLM frontend. It works with practically any LLM, remote or locally hosted.
 
 ## Features
 
@@ -80,14 +80,12 @@ Or run a local model with:
 | **bot_token** | Create a new Discord bot at [discord.com/developers/applications](https://discord.com/developers/applications) and generate a token under the "Bot" tab. Also enable "MESSAGE CONTENT INTENT". |
 | **client_id** | Found under the "OAuth2" tab of the Discord bot you just made. |
 | **status_message** | Set a custom message that displays on the bot's Discord profile. **Max 128 characters.** |
-| **allow_dms** | Set to `false` to disable direct message access.<br />(Default: `true`) |
-| **allowed_channel_ids** | A list of Discord channel IDs where the bot can be used. Also accepts [category](https://support.discord.com/hc/en-us/articles/115001580171-Channel-Categories-101) IDs. **Leave empty to allow all channels. Does not affect DMs.** |
-| **allowed_role_ids** | A list of Discord role IDs that can use the bot. **Leave empty to allow everyone. DMs are force-disabled when at least one role is specified.** |
-| **blocked_user_ids** | A list of Discord user IDs that are blocked from using the bot. |
 | **max_text** | The maximum amount of text allowed in a single message, including text from file attachments.<br />(Default: `100,000`) |
 | **max_images** | The maximum number of image attachments allowed in a single message. **Only applicable when using a vision model.**<br />(Default: `5`) |
-| **max_messages** | The maximum number of messages allowed in a reply chain. When exceeded, the oldest messages in the reply chain are dropped.<br />(Default: `25`) |
+| **max_messages** | The maximum number of messages allowed in a reply chain. When exceeded, the oldest messages are dropped.<br />(Default: `25`) |
 | **use_plain_responses** | When set to `true` the bot will use plaintext responses instead of embeds. Plaintext responses have a shorter character limit so the bot's messages may split more often. **Also disables streamed responses and warning messages.**<br />(Default: `false`) |
+| **allow_dms** | Set to `false` to disable direct message access.<br />(Default: `true`) |
+| **permissions** | Configure permissions for `users`, `roles` and `channels`, each with a list of `allowed_ids` and `blocked_ids`. **Leave `allowed_ids` empty to allow ALL. Role and channel permissions do not affect DMs. You can control channel permissions in groups using [category](https://support.discord.com/hc/en-us/articles/115001580171-Channel-Categories-101) IDs.** |
 
 ### LLM settings:
 
