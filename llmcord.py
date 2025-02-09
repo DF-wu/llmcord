@@ -117,6 +117,7 @@ async def on_message(new_msg):
     messages = []
     user_warnings = set()
     curr_msg = new_msg
+
     while curr_msg != None and len(messages) < max_messages:
         curr_node = msg_nodes.setdefault(curr_msg.id, MsgNode())
 
@@ -213,24 +214,29 @@ async def on_message(new_msg):
     try:
         async with new_msg.channel.typing():
             async for curr_chunk in await openai_client.chat.completions.create(**kwargs):
+                if prev_chunk != None and prev_chunk.choices[0].finish_reason != None:
+                    break
+
                 prev_content = prev_chunk.choices[0].delta.content if prev_chunk != None and prev_chunk.choices[0].delta.content else ""
                 curr_content = curr_chunk.choices[0].delta.content or ""
 
                 prev_chunk = curr_chunk
 
-                if not (response_contents or prev_content):
+                finish_reason = curr_chunk.choices[0].finish_reason
+
+                new_content = prev_content if finish_reason == None else (prev_content + curr_content)
+
+                if not response_contents and not new_content:
                     continue
 
-                if start_next_msg := response_contents == [] or len(response_contents[-1] + prev_content) > max_message_length:
+                if start_next_msg := response_contents == [] or len(response_contents[-1] + new_content) > max_message_length:
                     response_contents.append("")
 
-                response_contents[-1] += prev_content
+                response_contents[-1] += new_content
 
                 if not use_plain_responses:
-                    finish_reason = curr_chunk.choices[0].finish_reason
-
                     ready_to_edit = (edit_task == None or edit_task.done()) and dt.now().timestamp() - last_task_time >= EDIT_DELAY_SECONDS
-                    msg_split_incoming = len(response_contents[-1] + curr_content) > max_message_length
+                    msg_split_incoming = finish_reason == None and len(response_contents[-1] + curr_content) > max_message_length
                     is_final_edit = finish_reason != None or msg_split_incoming
                     is_good_finish = finish_reason != None and finish_reason.lower() in ("stop", "end_turn")
 
