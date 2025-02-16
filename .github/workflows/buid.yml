@@ -7,7 +7,6 @@ on:
   pull_request:
     branches: 
       - main
-  # 新增排程 (每天 08:00)
   schedule:
     - cron: "0 0 */7 * *"
 
@@ -20,14 +19,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+        with:
+          ref: main
       # https://github.com/marketplace/actions/upstream-sync
       - name: Sync upstream changes
         id: sync
         uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
         with:
           target_sync_branch: main
-          target_repo_token: ${{ secrets.GH_TOKEN }}
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
           upstream_sync_repo: jakobdylanc/llmcord
           upstream_sync_branch: main
           # 其他可選參數請參考官方文件
