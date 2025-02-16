@@ -146,7 +146,7 @@ async def on_message(new_msg):
 
                 try:
                     if (
-                        not curr_msg.reference
+                        curr_msg.reference == None
                         and discord_client.user.mention not in curr_msg.content
                         and (prev_msg_in_channel := ([m async for m in curr_msg.channel.history(before=curr_msg, limit=1)] or [None])[0])
                         and prev_msg_in_channel.type in (discord.MessageType.default, discord.MessageType.reply)
@@ -155,7 +155,7 @@ async def on_message(new_msg):
                         curr_node.parent_msg = prev_msg_in_channel
                     else:
                         is_public_thread = curr_msg.channel.type == discord.ChannelType.public_thread
-                        parent_is_thread_start = is_public_thread and not curr_msg.reference and curr_msg.channel.parent.type == discord.ChannelType.text
+                        parent_is_thread_start = is_public_thread and curr_msg.reference == None and curr_msg.channel.parent.type == discord.ChannelType.text
 
                         if parent_msg_id := curr_msg.channel.id if parent_is_thread_start else getattr(curr_msg.reference, "message_id", None):
                             if parent_is_thread_start:
@@ -201,10 +201,9 @@ async def on_message(new_msg):
         messages.append(dict(role="system", content=full_system_prompt))
 
     # Generate and send response message(s) (can be multiple if response is long)
+    curr_content = finish_reason = edit_task = None
     response_msgs = []
     response_contents = []
-    prev_chunk = None
-    edit_task = None
 
     embed = discord.Embed()
     for warning in sorted(user_warnings):
@@ -214,19 +213,17 @@ async def on_message(new_msg):
     try:
         async with new_msg.channel.typing():
             async for curr_chunk in await openai_client.chat.completions.create(**kwargs):
-                if prev_chunk != None and prev_chunk.choices[0].finish_reason != None:
+                if finish_reason != None:
                     break
-
-                prev_content = prev_chunk.choices[0].delta.content if prev_chunk != None and prev_chunk.choices[0].delta.content else ""
-                curr_content = curr_chunk.choices[0].delta.content or ""
-
-                prev_chunk = curr_chunk
 
                 finish_reason = curr_chunk.choices[0].finish_reason
 
+                prev_content = curr_content or ""
+                curr_content = curr_chunk.choices[0].delta.content or ""
+
                 new_content = prev_content if finish_reason == None else (prev_content + curr_content)
 
-                if not response_contents and not new_content:
+                if response_contents == [] and new_content == "":
                     continue
 
                 if start_next_msg := response_contents == [] or len(response_contents[-1] + new_content) > max_message_length:
