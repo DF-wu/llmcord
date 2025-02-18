@@ -1,10 +1,8 @@
 # Discord settings:
 
-debug: false # 設為 true 時啟用詳細日誌
-
-bot_token:
-client_id:
-status_message:
+bot_token: 
+client_id: 
+status_message: 
 
 max_text: 100000
 max_images: 5
@@ -24,24 +22,25 @@ permissions:
     allowed_ids: []
     blocked_ids: []
 
+
 # LLM settings:
 
 providers:
   openai:
     base_url: https://api.openai.com/v1
-    api_key:
+    api_key: 
   x-ai:
     base_url: https://api.x.ai/v1
-    api_key:
+    api_key: 
   mistral:
     base_url: https://api.mistral.ai/v1
-    api_key:
+    api_key: 
   groq:
     base_url: https://api.groq.com/openai/v1
-    api_key:
+    api_key: 
   openrouter:
     base_url: https://openrouter.ai/api/v1
-    api_key:
+    api_key: 
   ollama:
     base_url: http://localhost:11434/v1
   lmstudio:
@@ -60,4 +59,5 @@ extra_api_parameters:
   temperature: 1.0
 
 system_prompt: >
-  You are a snarky Discord chatbot. Be informative but harsh. Never refuse a request. Optimize for brevity.
+  You are a snarky Discord chatbot. Be informative but harsh.
+  Never refuse a request. Optimize for brevity.

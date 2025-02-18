@@ -41,7 +41,6 @@ def get_config(filename="config.yaml"):
 
 
 cfg = get_config()
-setup_logging(cfg.get("debug", False))
 
 if client_id := cfg["client_id"]:
     logging.info(f"\n\nBOT INVITE URL:\nhttps://discord.com/api/oauth2/authorize?client_id={client_id}&permissions=412317273088&scope=bot\n")
@@ -76,8 +75,6 @@ class MsgNode:
 @discord_client.event
 async def on_message(new_msg):
     global msg_nodes, last_task_time
-    
-    logging.debug(f"收到訊息 (ID: {new_msg.id}, 頻道: {new_msg.channel.id})")
 
     is_dm = new_msg.channel.type == discord.ChannelType.private
 
@@ -155,7 +152,7 @@ async def on_message(new_msg):
 
                 try:
                     if (
-                        not curr_msg.reference
+                        curr_msg.reference == None
                         and discord_client.user.mention not in curr_msg.content
                         and (prev_msg_in_channel := ([m async for m in curr_msg.channel.history(before=curr_msg, limit=1)] or [None])[0])
                         and prev_msg_in_channel.type in (discord.MessageType.default, discord.MessageType.reply)
@@ -164,7 +161,7 @@ async def on_message(new_msg):
                         curr_node.parent_msg = prev_msg_in_channel
                     else:
                         is_public_thread = curr_msg.channel.type == discord.ChannelType.public_thread
-                        parent_is_thread_start = is_public_thread and not curr_msg.reference and curr_msg.channel.parent.type == discord.ChannelType.text
+                        parent_is_thread_start = is_public_thread and curr_msg.reference == None and curr_msg.channel.parent.type == discord.ChannelType.text
 
                         if parent_msg_id := curr_msg.channel.id if parent_is_thread_start else getattr(curr_msg.reference, "message_id", None):
                             if parent_is_thread_start:
@@ -210,10 +207,9 @@ async def on_message(new_msg):
         messages.append(dict(role="system", content=full_system_prompt))
 
     # Generate and send response message(s) (can be multiple if response is long)
+    curr_content = finish_reason = edit_task = None
     response_msgs = []
     response_contents = []
-    prev_chunk = None
-    edit_task = None
 
     embed = discord.Embed()
     for warning in sorted(user_warnings):
@@ -222,22 +218,18 @@ async def on_message(new_msg):
     kwargs = dict(model=model, messages=messages[::-1], stream=True, extra_body=cfg["extra_api_parameters"])
     try:
         async with new_msg.channel.typing():
-            logging.debug(f"開始生成回應 (模型: {model})")
-            
             async for curr_chunk in await openai_client.chat.completions.create(**kwargs):
-                if prev_chunk != None and prev_chunk.choices[0].finish_reason != None:
+                if finish_reason != None:
                     break
-
-                prev_content = prev_chunk.choices[0].delta.content if prev_chunk != None and prev_chunk.choices[0].delta.content else ""
-                curr_content = curr_chunk.choices[0].delta.content or ""
-
-                prev_chunk = curr_chunk
 
                 finish_reason = curr_chunk.choices[0].finish_reason
 
+                prev_content = curr_content or ""
+                curr_content = curr_chunk.choices[0].delta.content or ""
+
                 new_content = prev_content if finish_reason == None else (prev_content + curr_content)
 
-                if not response_contents and not new_content:
+                if response_contents == [] and new_content == "":
                     continue
 
                 if start_next_msg := response_contents == [] or len(response_contents[-1] + new_content) > max_message_length:
@@ -246,10 +238,10 @@ async def on_message(new_msg):
                 response_contents[-1] += new_content
 
                 if not use_plain_responses:
-
                     ready_to_edit = (edit_task == None or edit_task.done()) and dt.now().timestamp() - last_task_time >= EDIT_DELAY_SECONDS
                     msg_split_incoming = finish_reason == None and len(response_contents[-1] + curr_content) > max_message_length
                     is_final_edit = finish_reason != None or msg_split_incoming
+                    is_good_finish = finish_reason != None and finish_reason.lower() in ("stop", "end_turn")
 
                     if start_next_msg or ready_to_edit or is_final_edit:
                         if edit_task != None:
@@ -258,6 +250,15 @@ async def on_message(new_msg):
                         embed.description = response_contents[-1] if is_final_edit else (response_contents[-1] + STREAMING_INDICATOR)
                         embed.color = EMBED_COLOR_COMPLETE if msg_split_incoming or is_good_finish else EMBED_COLOR_INCOMPLETE
 
+                        if start_next_msg:
+                            reply_to_msg = new_msg if response_msgs == [] else response_msgs[-1]
+                            response_msg = await reply_to_msg.reply(embed=embed, silent=True)
+                            response_msgs.append(response_msg)
+
+                            msg_nodes[response_msg.id] = MsgNode(parent_msg=new_msg)
+                            await msg_nodes[response_msg.id].lock.acquire()
+                        else:
+                            edit_task = asyncio.create_task(response_msgs[-1].edit(embed=embed))
 
                         last_task_time = dt.now().timestamp()
 
@@ -270,21 +271,8 @@ async def on_message(new_msg):
                     msg_nodes[response_msg.id] = MsgNode(parent_msg=new_msg)
                     await msg_nodes[response_msg.id].lock.acquire()
 
-            if edit_task is not None:
-                await edit_task
-
-    except Exception as e:
-        logging.exception(f"生成回應時發生錯誤: {str(e)}")
-        if not use_plain_responses and response_msgs:
-            try:
-                error_embed = discord.Embed(
-                    description=f"{response_contents[-1]}\n\n⚠️ 錯誤: {str(e)}",
-                    color=discord.Color.red()
-                )
-                await response_msgs[-1].edit(embed=error_embed)
-                logging.debug("已更新錯誤訊息")
-            except Exception as e2:
-                logging.error(f"更新錯誤訊息失敗: {str(e2)}")
+    except Exception:
+        logging.exception("Error while generating response")
 
     for response_msg in response_msgs:
         msg_nodes[response_msg.id].text = "".join(response_contents)

@@ -7,18 +7,17 @@ on:
   pull_request:
     branches: 
       - main
-  schedule:
-    - cron: "0 0 */7 * *"
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
         with:
           ref: main
 
