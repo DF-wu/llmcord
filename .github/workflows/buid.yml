@@ -21,7 +21,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
-      # https://github.com/marketplace/actions/upstream-sync
+
+      # syuc upstream changes
+      # doc: https://github.com/marketplace/actions/upstream-sync
+
       - name: Sync upstream changes
         id: sync
         uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
