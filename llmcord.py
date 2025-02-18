@@ -10,6 +10,8 @@ import httpx
 from openai import AsyncOpenAI
 import yaml
 
+
+# my log level
 def setup_logging(debug=False):
     """設定日誌等級和格式"""
     level = logging.DEBUG if debug else logging.INFO
