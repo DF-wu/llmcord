@@ -20,8 +20,21 @@ def setup_logging(debug=False):
         format="%(asctime)s %(levelname)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
+# read my vision model file load to VISION_MODEL_TAGS
+def read_custom_vision_models(filepath):
+    """To extend my vision model to main program in minimal code"""
+    with open(filepath, "r") as file:
+        return yaml.safe_load(file)
 
-VISION_MODEL_TAGS = ("gpt-4o", "claude-3", "gemini", "pixtral", "llava", "vision", "vl", "gemini-2.0-flash-thinking-exp" )
+visionModelsyaml = read_custom_vision_models("vision_models.yaml")
+EXTRA_MODELS = visionModelsyaml["vision_models"]
+
+
+
+
+
+
+VISION_MODEL_TAGS = ("gpt-4o", "claude-3", "gemini", "pixtral", "llava", "vision", "vl") + EXTRA_MODELS
 PROVIDERS_SUPPORTING_USERNAMES = ("openai", "x-ai")
 
 ALLOWED_FILE_TYPES = ("image", "text")
@@ -33,6 +46,12 @@ STREAMING_INDICATOR = " ⚪"
 EDIT_DELAY_SECONDS = 1
 
 MAX_MESSAGE_NODES = 100
+
+
+
+
+
+
 
 
 def get_config(filename="config.yaml"):
