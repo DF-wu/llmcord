@@ -21,7 +21,7 @@ def setup_logging(debug=False):
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-VISION_MODEL_TAGS = ("gpt-4o", "claude-3", "gemini", "pixtral", "llava", "vision", "vl")
+VISION_MODEL_TAGS = ("gpt-4o", "claude-3", "gemini", "pixtral", "llava", "vision", "vl", "gemini-2.0-flash-thinking-exp" )
 PROVIDERS_SUPPORTING_USERNAMES = ("openai", "x-ai")
 
 ALLOWED_FILE_TYPES = ("image", "text")
