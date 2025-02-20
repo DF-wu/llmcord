@@ -22,8 +22,11 @@ def setup_logging(debug=False):
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-EXTRA_MODELS = [model.strip() for model in os.environ.get("EXTRA_MODELS", "").split(",") if model.strip()]
-VISION_MODEL_TAGS = ("gpt-4o", "claude-3", "gemini", "pixtral", "llava", "vision", "vl") + tuple(EXTRA_MODELS)
+# EXTRA_MODELS_TYPE is a list to add a series of models. 
+# E.g. "gemini" is enough to add the gemini model to the list of models.
+#      "claue" is enough to add the claude model to the list of models.
+EXTRA_MODELS_TYPE = [model.strip() for model in os.environ.get("EXTRA_MODELS", "").split(",") if model.strip()]
+VISION_MODEL_TAGS = ("gpt-4o", "claude-3", "gemini", "pixtral", "llava", "vision", "vl") + tuple(EXTRA_MODELS_TYPE)
 PROVIDERS_SUPPORTING_USERNAMES = ("openai", "x-ai")
 
 ALLOWED_FILE_TYPES = ("image", "text")
