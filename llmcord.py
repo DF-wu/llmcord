@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime as dt
 import logging
 from typing import Literal, Optional
+import os
 
 import discord
 import httpx
@@ -20,21 +21,9 @@ def setup_logging(debug=False):
         format="%(asctime)s %(levelname)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-# read my vision model file load to VISION_MODEL_TAGS
-def read_custom_vision_models(filepath):
-    """To extend my vision model to main program in minimal code"""
-    with open(filepath, "r") as file:
-        return yaml.safe_load(file)
 
-visionModelsyaml = read_custom_vision_models("vision_models.yaml")
-EXTRA_MODELS = visionModelsyaml["vision_models"]
-
-
-
-
-
-
-VISION_MODEL_TAGS = ("gpt-4o", "claude-3", "gemini", "pixtral", "llava", "vision", "vl") + EXTRA_MODELS
+EXTRA_MODELS = [model.strip() for model in os.environ.get("EXTRA_MODELS", "").split(",") if model.strip()]
+VISION_MODEL_TAGS = ("gpt-4o", "claude-3", "gemini", "pixtral", "llava", "vision", "vl") + tuple(EXTRA_MODELS)
 PROVIDERS_SUPPORTING_USERNAMES = ("openai", "x-ai")
 
 ALLOWED_FILE_TYPES = ("image", "text")
