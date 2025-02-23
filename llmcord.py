@@ -12,15 +12,11 @@ from openai import AsyncOpenAI
 import yaml
 
 
-# my log level
-def setup_logging(debug=False):
-    """設定日誌等級和格式"""
-    level = logging.DEBUG if debug else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s %(levelname)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 # EXTRA_MODELS_TYPE is a list to add a series of models. 
 # E.g. "gemini" is enough to add the gemini model to the list of models.
@@ -41,17 +37,16 @@ MAX_MESSAGE_NODES = 100
 
 
 
-
-
-
-
-
 def get_config(filename="config.yaml"):
     with open(filename, "r") as file:
         return yaml.safe_load(file)
 
 
 cfg = get_config()
+
+# 根據 YAML 檔內的 debug 設定動態調整日誌層級
+if cfg.get("debug", False):
+    logging.getLogger().setLevel(logging.DEBUG)
 
 if client_id := cfg["client_id"]:
     logging.info(f"\n\nBOT INVITE URL:\nhttps://discord.com/api/oauth2/authorize?client_id={client_id}&permissions=412317273088&scope=bot\n")
@@ -217,6 +212,8 @@ async def on_message(new_msg):
         full_system_prompt = "\n".join([system_prompt] + system_prompt_extras)
         messages.append(dict(role="system", content=full_system_prompt))
 
+    logging.info(f"Start generating response using model {model} with {len(messages)} messages.")
+
     # Generate and send response message(s) (can be multiple if response is long)
     curr_content = finish_reason = edit_task = None
     response_msgs = []
@@ -248,6 +245,8 @@ async def on_message(new_msg):
 
                 response_contents[-1] += new_content
 
+                logging.debug(f"Processed response chunk, current chunk length: {len(response_contents[-1])}")
+
                 if not use_plain_responses:
                     ready_to_edit = (edit_task == None or edit_task.done()) and dt.now().timestamp() - last_task_time >= EDIT_DELAY_SECONDS
                     msg_split_incoming = finish_reason == None and len(response_contents[-1] + curr_content) > max_message_length
@@ -273,6 +272,8 @@ async def on_message(new_msg):
 
                         last_task_time = dt.now().timestamp()
 
+            logging.info(f"Response generation completed in {len(response_contents)} chunk(s).")
+
             if use_plain_responses:
                 for content in response_contents:
                     reply_to_msg = new_msg if response_msgs == [] else response_msgs[-1]
@@ -288,6 +289,8 @@ async def on_message(new_msg):
     for response_msg in response_msgs:
         msg_nodes[response_msg.id].text = "".join(response_contents)
         msg_nodes[response_msg.id].lock.release()
+
+    logging.info(f"Finished handling message {new_msg.id}")
 
     # Delete oldest MsgNodes (lowest message IDs) from the cache
     if (num_nodes := len(msg_nodes)) > MAX_MESSAGE_NODES:
