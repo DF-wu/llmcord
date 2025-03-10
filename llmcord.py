@@ -22,7 +22,7 @@ logging.basicConfig(
 # E.g. "gemini" is enough to add the gemini model to the list of models.
 #      "claue" is enough to add the claude model to the list of models.
 EXTRA_MODELS_TYPE = [model.strip() for model in os.environ.get("EXTRA_MODELS", "").split(",") if model.strip()]
-VISION_MODEL_TAGS = ("gpt-4o", "claude-3", "gemini", "pixtral", "llava", "vision", "vl") + tuple(EXTRA_MODELS_TYPE)
+VISION_MODEL_TAGS = ("gpt-4", "claude-3", "gemini", "pixtral", "llava", "vision", "vl") + tuple(EXTRA_MODELS_TYPE)
 PROVIDERS_SUPPORTING_USERNAMES = ("openai", "x-ai")
 
 ALLOWED_FILE_TYPES = ("image", "text")
@@ -87,8 +87,8 @@ async def on_message(new_msg):
     if (not is_dm and discord_client.user not in new_msg.mentions) or new_msg.author.bot:
         return
 
-    role_ids = tuple(role.id for role in getattr(new_msg.author, "roles", ()))
-    channel_ids = tuple(id for id in (new_msg.channel.id, getattr(new_msg.channel, "parent_id", None), getattr(new_msg.channel, "category_id", None)) if id)
+    role_ids = set(role.id for role in getattr(new_msg.author, "roles", ()))
+    channel_ids = set(id for id in (new_msg.channel.id, getattr(new_msg.channel, "parent_id", None), getattr(new_msg.channel, "category_id", None)) if id)
 
     cfg = get_config()
 
