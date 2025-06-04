@@ -4,4 +4,4 @@ services:
     network_mode: host
     restart: unless-stopped
     volumes:
-      - ./:/usr/src/app:ro
+      - ./:/app:ro

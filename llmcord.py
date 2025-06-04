@@ -3,10 +3,11 @@ from base64 import b64encode
 from dataclasses import dataclass, field
 from datetime import datetime as dt
 import logging
-from typing import Literal, Optional
-import os
+from typing import Any, Literal, Optional
 
 import discord
+from discord.app_commands import Choice
+from discord.ext import commands
 import httpx
 from openai import AsyncOpenAI
 import yaml
@@ -18,14 +19,8 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-# EXTRA_MODELS_TYPE is a list to add a series of models. 
-# E.g. "gemini" is enough to add the gemini model to the list of models.
-#      "claue" is enough to add the claude model to the list of models.
-EXTRA_MODELS_TYPE = [model.strip() for model in os.environ.get("EXTRA_MODELS", "").split(",") if model.strip()]
-VISION_MODEL_TAGS = ("gpt-4", "claude-3", "gemini", "pixtral", "llava", "vision", "vl") + tuple(EXTRA_MODELS_TYPE)
+VISION_MODEL_TAGS = ("gpt-4", "o3", "o4", "claude", "gemini", "gemma", "llama", "pixtral", "mistral", "vision", "vl")
 PROVIDERS_SUPPORTING_USERNAMES = ("openai", "x-ai")
-
-ALLOWED_FILE_TYPES = ("image", "text")
 
 EMBED_COLOR_COMPLETE = discord.Color.dark_green()
 EMBED_COLOR_INCOMPLETE = discord.Color.orange()
@@ -33,39 +28,32 @@ EMBED_COLOR_INCOMPLETE = discord.Color.orange()
 STREAMING_INDICATOR = " ⚪"
 EDIT_DELAY_SECONDS = 1
 
-MAX_MESSAGE_NODES = 100
+MAX_MESSAGE_NODES = 500
 
 
-
-def get_config(filename="config.yaml"):
+def get_config(filename: str = "config.yaml") -> dict[str, Any]:
     with open(filename, "r") as file:
         return yaml.safe_load(file)
 
 
-cfg = get_config()
-
-# 根據 YAML 檔內的 debug 設定動態調整日誌層級
-if cfg.get("debug", False):
-    logging.getLogger().setLevel(logging.DEBUG)
-
-if client_id := cfg["client_id"]:
-    logging.info(f"\n\nBOT INVITE URL:\nhttps://discord.com/api/oauth2/authorize?client_id={client_id}&permissions=412317273088&scope=bot\n")
-
-intents = discord.Intents.default()
-intents.message_content = True
-activity = discord.CustomActivity(name=(cfg["status_message"] or "github.com/jakobdylanc/llmcord")[:128])
-discord_client = discord.Client(intents=intents, activity=activity)
-
-httpx_client = httpx.AsyncClient()
+config = get_config()
+curr_model = next(iter(config["models"]))
 
 msg_nodes = {}
 last_task_time = 0
+
+intents = discord.Intents.default()
+intents.message_content = True
+activity = discord.CustomActivity(name=(config["status_message"] or "github.com/jakobdylanc/llmcord")[:128])
+discord_bot = commands.Bot(intents=intents, activity=activity, command_prefix=None)
+
+httpx_client = httpx.AsyncClient()
 
 
 @dataclass
 class MsgNode:
     text: Optional[str] = None
-    images: list = field(default_factory=list)
+    images: list[dict[str, Any]] = field(default_factory=list)
 
     role: Literal["user", "assistant"] = "assistant"
     user_id: Optional[int] = None
@@ -78,52 +66,91 @@ class MsgNode:
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
 
-@discord_client.event
-async def on_message(new_msg):
-    global msg_nodes, last_task_time
+@discord_bot.tree.command(name="model", description="View or switch the current model")
+async def model_command(interaction: discord.Interaction, model: str) -> None:
+    global curr_model
+
+    if model == curr_model:
+        output = f"Current model: {curr_model}"
+    else:
+        if user_is_admin := interaction.user.id in config["permissions"]["users"]["admin_ids"]:
+            curr_model = model
+            output = f"Model switched to: {model}"
+            logging.info(output)
+        else:
+            output = "You don't have permission to change the model."
+
+    await interaction.response.send_message(output, ephemeral=(interaction.channel.type == discord.ChannelType.private))
+
+
+@model_command.autocomplete("model")
+async def model_autocomplete(interaction: discord.Interaction, curr_str: str) -> list[Choice[str]]:
+    global config
+
+    if curr_str == "":
+        config = await asyncio.to_thread(get_config)
+
+    choices = [Choice(name=f"○ {model}", value=model) for model in config["models"] if model != curr_model and curr_str.lower() in model.lower()][:24]
+    choices += [Choice(name=f"◉ {curr_model} (current)", value=curr_model)] if curr_str.lower() in curr_model.lower() else []
+
+    return choices
+
+
+@discord_bot.event
+async def on_ready() -> None:
+    if client_id := config["client_id"]:
+        logging.info(f"\n\nBOT INVITE URL:\nhttps://discord.com/api/oauth2/authorize?client_id={client_id}&permissions=412317273088&scope=bot\n")
+
+    await discord_bot.tree.sync()
+
+
+@discord_bot.event
+async def on_message(new_msg: discord.Message) -> None:
+    global last_task_time
 
     is_dm = new_msg.channel.type == discord.ChannelType.private
 
-    if (not is_dm and discord_client.user not in new_msg.mentions) or new_msg.author.bot:
+    if (not is_dm and discord_bot.user not in new_msg.mentions) or new_msg.author.bot:
         return
 
     role_ids = set(role.id for role in getattr(new_msg.author, "roles", ()))
-    channel_ids = set(id for id in (new_msg.channel.id, getattr(new_msg.channel, "parent_id", None), getattr(new_msg.channel, "category_id", None)) if id)
+    channel_ids = set(filter(None, (new_msg.channel.id, getattr(new_msg.channel, "parent_id", None), getattr(new_msg.channel, "category_id", None))))
 
-    cfg = get_config()
+    config = await asyncio.to_thread(get_config)
 
-    allow_dms = cfg["allow_dms"]
-    permissions = cfg["permissions"]
+    permissions = config["permissions"]
+
+    user_is_admin = new_msg.author.id in permissions["users"]["admin_ids"]
 
     (allowed_user_ids, blocked_user_ids), (allowed_role_ids, blocked_role_ids), (allowed_channel_ids, blocked_channel_ids) = (
         (perm["allowed_ids"], perm["blocked_ids"]) for perm in (permissions["users"], permissions["roles"], permissions["channels"])
     )
 
     allow_all_users = not allowed_user_ids if is_dm else not allowed_user_ids and not allowed_role_ids
-    is_good_user = allow_all_users or new_msg.author.id in allowed_user_ids or any(id in allowed_role_ids for id in role_ids)
+    is_good_user = user_is_admin or allow_all_users or new_msg.author.id in allowed_user_ids or any(id in allowed_role_ids for id in role_ids)
     is_bad_user = not is_good_user or new_msg.author.id in blocked_user_ids or any(id in blocked_role_ids for id in role_ids)
 
     allow_all_channels = not allowed_channel_ids
-    is_good_channel = allow_dms if is_dm else allow_all_channels or any(id in allowed_channel_ids for id in channel_ids)
+    is_good_channel = user_is_admin or config["allow_dms"] if is_dm else allow_all_channels or any(id in allowed_channel_ids for id in channel_ids)
     is_bad_channel = not is_good_channel or any(id in blocked_channel_ids for id in channel_ids)
 
     if is_bad_user or is_bad_channel:
         return
 
-    provider, model = cfg["model"].split("/", 1)
-    base_url = cfg["providers"][provider]["base_url"]
-    api_key = cfg["providers"][provider].get("api_key", "sk-no-key-required")
+    provider_slash_model = curr_model
+    provider, model = provider_slash_model.split("/", 1)
+    model_parameters = config["models"].get(provider_slash_model, None)
+
+    base_url = config["providers"][provider]["base_url"]
+    api_key = config["providers"][provider].get("api_key", "sk-no-key-required")
     openai_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
 
     accept_images = any(x in model.lower() for x in VISION_MODEL_TAGS)
-    accept_usernames = any(x in provider.lower() for x in PROVIDERS_SUPPORTING_USERNAMES)
+    accept_usernames = any(x in provider_slash_model.lower() for x in PROVIDERS_SUPPORTING_USERNAMES)
 
-    max_text = cfg["max_text"]
-    max_images = cfg["max_images"] if accept_images else 0
-    max_messages = cfg["max_messages"]
-
-    use_plain_responses = cfg["use_plain_responses"]
-    max_message_length = 2000 if use_plain_responses else (4096 - len(STREAMING_INDICATOR))
+    max_text = config["max_text"]
+    max_images = config["max_images"] if accept_images else 0
+    max_messages = config["max_messages"]
 
     # Build message chain and set user warnings
     messages = []
@@ -135,34 +162,37 @@ async def on_message(new_msg):
 
         async with curr_node.lock:
             if curr_node.text == None:
-                cleaned_content = curr_msg.content.removeprefix(discord_client.user.mention).lstrip()
+                cleaned_content = curr_msg.content.removeprefix(discord_bot.user.mention).lstrip()
 
-                good_attachments = {type: [att for att in curr_msg.attachments if att.content_type and type in att.content_type] for type in ALLOWED_FILE_TYPES}
+                good_attachments = [att for att in curr_msg.attachments if att.content_type and any(att.content_type.startswith(x) for x in ("text", "image"))]
+
+                attachment_responses = await asyncio.gather(*[httpx_client.get(att.url) for att in good_attachments])
 
                 curr_node.text = "\n".join(
                     ([cleaned_content] if cleaned_content else [])
-                    + [embed.description for embed in curr_msg.embeds if embed.description]
-                    + [(await httpx_client.get(att.url)).text for att in good_attachments["text"]]
+                    + ["\n".join(filter(None, (embed.title, embed.description, embed.footer.text))) for embed in curr_msg.embeds]
+                    + [resp.text for att, resp in zip(good_attachments, attachment_responses) if att.content_type.startswith("text")]
                 )
 
                 curr_node.images = [
-                    dict(type="image_url", image_url=dict(url=f"data:{att.content_type};base64,{b64encode((await httpx_client.get(att.url)).content).decode('utf-8')}"))
-                    for att in good_attachments["image"]
+                    dict(type="image_url", image_url=dict(url=f"data:{att.content_type};base64,{b64encode(resp.content).decode('utf-8')}"))
+                    for att, resp in zip(good_attachments, attachment_responses)
+                    if att.content_type.startswith("image")
                 ]
 
-                curr_node.role = "assistant" if curr_msg.author == discord_client.user else "user"
+                curr_node.role = "assistant" if curr_msg.author == discord_bot.user else "user"
 
                 curr_node.user_id = curr_msg.author.id if curr_node.role == "user" else None
 
-                curr_node.has_bad_attachments = len(curr_msg.attachments) > sum(len(att_list) for att_list in good_attachments.values())
+                curr_node.has_bad_attachments = len(curr_msg.attachments) > len(good_attachments)
 
                 try:
                     if (
                         curr_msg.reference == None
-                        and discord_client.user.mention not in curr_msg.content
+                        and discord_bot.user.mention not in curr_msg.content
                         and (prev_msg_in_channel := ([m async for m in curr_msg.channel.history(before=curr_msg, limit=1)] or [None])[0])
                         and prev_msg_in_channel.type in (discord.MessageType.default, discord.MessageType.reply)
-                        and prev_msg_in_channel.author == (discord_client.user if curr_msg.channel.type == discord.ChannelType.private else curr_msg.author)
+                        and prev_msg_in_channel.author == (discord_bot.user if curr_msg.channel.type == discord.ChannelType.private else curr_msg.author)
                     ):
                         curr_node.parent_msg = prev_msg_in_channel
                     else:
@@ -204,7 +234,7 @@ async def on_message(new_msg):
 
     logging.info(f"Message received (user ID: {new_msg.author.id}, attachments: {len(new_msg.attachments)}, conversation length: {len(messages)}):\n{new_msg.content}")
 
-    if system_prompt := cfg["system_prompt"]:
+    if system_prompt := config["system_prompt"]:
         system_prompt_extras = [f"Today's date: {dt.now().strftime('%B %d %Y')}."]
         if accept_usernames:
             system_prompt_extras.append("User's names are their Discord IDs and should be typed as '<@ID>'.")
@@ -223,10 +253,12 @@ async def on_message(new_msg):
     for warning in sorted(user_warnings):
         embed.add_field(name=warning, value="", inline=False)
 
-    kwargs = dict(model=model, messages=messages[::-1], stream=True, extra_body=cfg["extra_api_parameters"])
+    use_plain_responses = config["use_plain_responses"]
+    max_message_length = 2000 if use_plain_responses else (4096 - len(STREAMING_INDICATOR))
+
     try:
         async with new_msg.channel.typing():
-            async for curr_chunk in await openai_client.chat.completions.create(**kwargs):
+            async for curr_chunk in await openai_client.chat.completions.create(model=model, messages=messages[::-1], stream=True, extra_body=model_parameters):
                 if finish_reason != None:
                     break
 
@@ -299,8 +331,8 @@ async def on_message(new_msg):
                 msg_nodes.pop(msg_id, None)
 
 
-async def main():
-    await discord_client.start(cfg["bot_token"])
+async def main() -> None:
+    await discord_bot.start(config["bot_token"])
 
 
 asyncio.run(main())
