@@ -1,0 +1,139 @@
+name: Build and Deploy Container
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: 
+      - main
+  schedule:
+    # Run weekly build every Sunday at 02:00 UTC to ensure fresh base images
+    - cron: "0 2 * * 0"
+  workflow_dispatch:  # Allow manual trigger
+    inputs:
+      force_build:
+        description: 'Force rebuild even if no changes detected'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0  # Fetch full history for proper sync detection
+
+      # Sync with upstream repository to get latest changes
+      - name: Sync with upstream repository
+        id: sync
+        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
+        with:
+          target_sync_branch: main
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
+          upstream_sync_repo: jakobdylanc/llmcord
+          upstream_sync_branch: main
+          test_mode: false
+
+      # Log sync results for debugging purposes
+      - name: Log sync results
+        run: |
+          echo "Sync completed with status: ${{ steps.sync.outputs.has_new_commits }}"
+          if [ "${{ steps.sync.outputs.has_new_commits }}" == "true" ]; then
+            echo "✅ New commits found from upstream, Docker build will be triggered"
+          else
+            echo "ℹ️ No new commits found from upstream"
+          fi
+          echo "Trigger event: ${{ github.event_name }}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Login to GitHub Container Registry for pushing images
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Determine if Docker build should be executed
+      - name: Determine build necessity
+        id: build_check
+        run: |
+          # Build conditions:
+          # 1. New commits from upstream sync
+          # 2. Manual workflow dispatch
+          # 3. Direct push to main branch
+          # 4. Scheduled build (weekly)
+          # 5. Force build flag is set
+          should_build=false
+          
+          if [ "${{ steps.sync.outputs.has_new_commits }}" == "true" ]; then
+            echo "Build reason: New upstream commits detected"
+            should_build=true
+          elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Build reason: Manual workflow trigger"
+            should_build=true
+          elif [ "${{ github.event_name }}" == "push" ]; then
+            echo "Build reason: Direct push to main branch"
+            should_build=true
+          elif [ "${{ github.event_name }}" == "schedule" ]; then
+            echo "Build reason: Scheduled weekly build"
+            should_build=true
+          elif [ "${{ github.event.inputs.force_build }}" == "true" ]; then
+            echo "Build reason: Force build requested"
+            should_build=true
+          fi
+          
+          echo "should_build=$should_build" >> $GITHUB_OUTPUT
+          echo "Final decision: should_build=$should_build"
+
+      # Build and push Docker image when conditions are met
+      - name: Build and push Docker image
+        if: steps.build_check.outputs.should_build == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64  # Multi-architecture support
+          push: true
+          tags: |
+            ghcr.io/df-wu/llmcord:latest
+            ghcr.io/df-wu/llmcord:${{ github.sha }}
+          # Enable build cache for faster subsequent builds
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # Add metadata labels to the image
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+            org.opencontainers.image.title=llmcord
+            org.opencontainers.image.description=Discord LLM bot
+
+      # Report successful build completion
+      - name: Report build success
+        if: steps.build_check.outputs.should_build == 'true'
+        run: |
+          echo "🎉 Docker image build and push completed successfully!"
+          echo "📦 Image tags:"
+          echo "  - ghcr.io/df-wu/llmcord:latest"
+          echo "  - ghcr.io/df-wu/llmcord:${{ github.sha }}"
+          echo "🏗️ Platforms: linux/amd64, linux/arm64"
+
+      # Report when build is skipped
+      - name: Report build skipped
+        if: steps.build_check.outputs.should_build == 'false'
+        run: |
+          echo "⏭️ Docker build skipped - no changes detected and no manual trigger"
+          echo "Current conditions checked:"
+          echo "  - New upstream commits: ${{ steps.sync.outputs.has_new_commits }}"
+          echo "  - Event type: ${{ github.event_name }}"
+          echo "  - Force build: ${{ github.event.inputs.force_build }}"
