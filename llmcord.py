@@ -1,7 +1,7 @@
 import asyncio
 from base64 import b64encode
 from dataclasses import dataclass, field
-from datetime import datetime as dt
+from datetime import datetime
 import logging
 from typing import Any, Literal, Optional
 
@@ -235,12 +235,13 @@ async def on_message(new_msg: discord.Message) -> None:
     logging.info(f"Message received (user ID: {new_msg.author.id}, attachments: {len(new_msg.attachments)}, conversation length: {len(messages)}):\n{new_msg.content}")
 
     if system_prompt := config["system_prompt"]:
-        system_prompt_extras = [f"Today's date: {dt.now().strftime('%B %d %Y')}."]
-        if accept_usernames:
-            system_prompt_extras.append("User's names are their Discord IDs and should be typed as '<@ID>'.")
+        now = datetime.now().astimezone()
 
-        full_system_prompt = "\n".join([system_prompt] + system_prompt_extras)
-        messages.append(dict(role="system", content=full_system_prompt))
+        system_prompt = system_prompt.replace("{date}", now.strftime("%B %d %Y")).replace("{time}", now.strftime("%H:%M:%S %Z%z")).strip()
+        if accept_usernames:
+            system_prompt += "\nUser's names are their Discord IDs and should be typed as '<@ID>'."
+
+        messages.append(dict(role="system", content=system_prompt))
 
     logging.info(f"Start generating response using model {model} with {len(messages)} messages.")
 
@@ -280,7 +281,7 @@ async def on_message(new_msg: discord.Message) -> None:
                 logging.debug(f"Processed response chunk, current chunk length: {len(response_contents[-1])}")
 
                 if not use_plain_responses:
-                    ready_to_edit = (edit_task == None or edit_task.done()) and dt.now().timestamp() - last_task_time >= EDIT_DELAY_SECONDS
+                    ready_to_edit = (edit_task == None or edit_task.done()) and datetime.now().timestamp() - last_task_time >= EDIT_DELAY_SECONDS
                     msg_split_incoming = finish_reason == None and len(response_contents[-1] + curr_content) > max_message_length
                     is_final_edit = finish_reason != None or msg_split_incoming
                     is_good_finish = finish_reason != None and finish_reason.lower() in ("stop", "end_turn")
@@ -302,7 +303,7 @@ async def on_message(new_msg: discord.Message) -> None:
                         else:
                             edit_task = asyncio.create_task(response_msgs[-1].edit(embed=embed))
 
-                        last_task_time = dt.now().timestamp()
+                        last_task_time = datetime.now().timestamp()
 
             logging.info(f"Response generation completed in {len(response_contents)} chunk(s).")
 
