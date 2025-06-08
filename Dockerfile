@@ -6,7 +6,7 @@ WORKDIR /app
 
 COPY requirements.txt .
 COPY llmcord.py .
-COPY config.yaml .
+COPY config-example.yaml config.yaml
 
 RUN pip install --no-cache-dir -r requirements.txt
 
