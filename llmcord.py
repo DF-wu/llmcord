@@ -99,7 +99,7 @@ async def model_autocomplete(interaction: discord.Interaction, curr_str: str) ->
 @discord_bot.event
 async def on_ready() -> None:
     if client_id := config["client_id"]:
-        logging.info(f"\n\nBOT INVITE URL:\nhttps://discord.com/api/oauth2/authorize?client_id={client_id}&permissions=412317273088&scope=bot\n")
+        logging.info(f"\n\nBOT INVITE URL:\nhttps://discord.com/oauth2/authorize?client_id={client_id}&permissions=412317273088&scope=bot\n")
 
     await discord_bot.tree.sync()
 
@@ -336,4 +336,7 @@ async def main() -> None:
     await discord_bot.start(config["bot_token"])
 
 
-asyncio.run(main())
+try:
+    asyncio.run(main())
+except KeyboardInterrupt:
+    pass
