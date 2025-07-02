@@ -118,6 +118,8 @@ async def on_message(new_msg: discord.Message) -> None:
 
     config = await asyncio.to_thread(get_config)
 
+    allow_dms = config.get("allow_dms", True)
+
     permissions = config["permissions"]
 
     user_is_admin = new_msg.author.id in permissions["users"]["admin_ids"]
@@ -131,7 +133,7 @@ async def on_message(new_msg: discord.Message) -> None:
     is_bad_user = not is_good_user or new_msg.author.id in blocked_user_ids or any(id in blocked_role_ids for id in role_ids)
 
     allow_all_channels = not allowed_channel_ids
-    is_good_channel = user_is_admin or config["allow_dms"] if is_dm else allow_all_channels or any(id in allowed_channel_ids for id in channel_ids)
+    is_good_channel = user_is_admin or allow_dms if is_dm else allow_all_channels or any(id in allowed_channel_ids for id in channel_ids)
     is_bad_channel = not is_good_channel or any(id in blocked_channel_ids for id in channel_ids)
 
     if is_bad_user or is_bad_channel:
@@ -148,9 +150,9 @@ async def on_message(new_msg: discord.Message) -> None:
     accept_images = any(x in model.lower() for x in VISION_MODEL_TAGS)
     accept_usernames = any(x in provider_slash_model.lower() for x in PROVIDERS_SUPPORTING_USERNAMES)
 
-    max_text = config["max_text"]
-    max_images = config["max_images"] if accept_images else 0
-    max_messages = config["max_messages"]
+    max_text = config.get("max_text", 100000)
+    max_images = config.get("max_images", 5) if accept_images else 0
+    max_messages = config.get("max_messages", 25)
 
     # Build message chain and set user warnings
     messages = []
@@ -254,7 +256,7 @@ async def on_message(new_msg: discord.Message) -> None:
     for warning in sorted(user_warnings):
         embed.add_field(name=warning, value="", inline=False)
 
-    use_plain_responses = config["use_plain_responses"]
+    use_plain_responses = config.get("use_plain_responses", False)
     max_message_length = 2000 if use_plain_responses else (4096 - len(STREAMING_INDICATOR))
 
     try:
