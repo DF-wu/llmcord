@@ -1,14 +1,3 @@
-
-I just set the container auto build&publish.
-
-The image url: `ghcr.io/df-wu/llmcord:latest`
-
-
-
-
---------------------
-
-
 <h1 align="center">
   llmcord
 </h1>
