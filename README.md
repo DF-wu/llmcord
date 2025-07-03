@@ -10,6 +10,8 @@
   <img src="https://github.com/user-attachments/assets/7791cc6b-6755-484f-a9e3-0707765b081f" alt="">
 </p>
 
+> **Note:** This is a forked version of `jakobdylanc/llmcord`, focused on providing a pre-built Docker image. You can use the image `ghcr.io/df-wu/llmcord`.
+
 llmcord transforms Discord into a collaborative LLM frontend. It works with practically any LLM, remote or locally hosted.
 
 ## Features
@@ -64,8 +66,8 @@ Or run local models with:
 
 1. Clone the repo:
    ```bash
-   git clone https://github.com/jakobdylanc/llmcord
-   ```
+git clone https://github.com/jakobdylanc/llmcord
+```
 
 2. Create a copy of "config-example.yaml" named "config.yaml" and set it up:
 
@@ -95,14 +97,14 @@ Or run local models with:
 
    **No Docker:**
    ```bash
-   python -m pip install -U -r requirements.txt
+python -m pip install -U -r requirements.txt
    python llmcord.py
-   ```
+```
 
    **With Docker:**
    ```bash
-   docker compose up
-   ```
+docker compose up
+```
 
 ## Notes
 
@@ -119,5 +121,7 @@ Or run local models with:
     <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=jakobdylanc/llmcord&type=Date&theme=dark" />
     <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=jakobdylanc/llmcord&type=Date" />
     <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=jakobdylanc/llmcord&type=Date" />
+  </picture>
+</a>
   </picture>
 </a>
