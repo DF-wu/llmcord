@@ -4,7 +4,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY * .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
