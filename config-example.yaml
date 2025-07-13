@@ -33,6 +33,14 @@ providers:
   x-ai:
     base_url: https://api.x.ai/v1
     api_key: 
+  google:
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai
+    api_key: 
+  azure-openai:
+    base_url: https://<resource name>.openai.azure.com/openai/deployments/<deployment name>
+    api_key: 
+    extra_query:
+      api-version: 2024-12-01-preview
   mistral:
     base_url: https://api.mistral.ai/v1
     api_key: 
@@ -56,9 +64,12 @@ models:
   openai/o3:
     reasoning_effort: high
 
-  x-ai/grok-3-latest:
+  x-ai/grok-4:
     search_parameters:
       mode: auto
+
+  google/gemini-2.5-pro:
+    reasoning_effort: high
 
   openrouter/anthropic/claude-sonnet-4:
 
