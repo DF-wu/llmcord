@@ -52,7 +52,7 @@ Or run local models with:
 ---
 
 ### And more:
-- Supports image attachments when using a vision model (like gpt-4.1, grok-4, claude-4, etc.)
+- Supports image attachments when using a vision model (like gpt-5, grok-4, claude-4, etc.)
 - Supports text file attachments (.txt, .py, .c, etc.)
 - Customizable personality (aka system prompt)
 - User identity aware (OpenAI API and xAI API only)
