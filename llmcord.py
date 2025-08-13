@@ -251,7 +251,7 @@ async def on_message(new_msg: discord.Message) -> None:
         messages.append(dict(role="system", content=system_prompt))
 
     # Generate and send response message(s) (can be multiple if response is long)
-    curr_content = finish_reason = edit_task = None
+    curr_content = finish_reason = None
     response_msgs = []
     response_contents = []
 
@@ -288,15 +288,14 @@ async def on_message(new_msg: discord.Message) -> None:
                 response_contents[-1] += new_content
 
                 if not use_plain_responses:
-                    ready_to_edit = (edit_task == None or edit_task.done()) and datetime.now().timestamp() - last_task_time >= EDIT_DELAY_SECONDS
+                    time_delta = datetime.now().timestamp() - last_task_time
+
+                    ready_to_edit = time_delta >= EDIT_DELAY_SECONDS
                     msg_split_incoming = finish_reason == None and len(response_contents[-1] + curr_content) > max_message_length
                     is_final_edit = finish_reason != None or msg_split_incoming
                     is_good_finish = finish_reason != None and finish_reason.lower() in ("stop", "end_turn")
 
                     if start_next_msg or ready_to_edit or is_final_edit:
-                        if edit_task != None:
-                            await edit_task
-
                         embed.description = response_contents[-1] if is_final_edit else (response_contents[-1] + STREAMING_INDICATOR)
                         embed.color = EMBED_COLOR_COMPLETE if msg_split_incoming or is_good_finish else EMBED_COLOR_INCOMPLETE
 
@@ -308,7 +307,8 @@ async def on_message(new_msg: discord.Message) -> None:
                             msg_nodes[response_msg.id] = MsgNode(parent_msg=new_msg)
                             await msg_nodes[response_msg.id].lock.acquire()
                         else:
-                            edit_task = asyncio.create_task(response_msg.edit(embed=embed))
+                            await asyncio.sleep(EDIT_DELAY_SECONDS - time_delta)
+                            await response_msg.edit(embed=embed)
 
                         last_task_time = datetime.now().timestamp()
 
