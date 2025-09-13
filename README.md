@@ -32,7 +32,7 @@ Additionally:
 ---
 
 ### Model switching with `/model`:
-![image](https://github.com/user-attachments/assets/9fbb9f56-9004-4997-a864-5b2ec67bac8f)
+![image](https://github.com/user-attachments/assets/568e2f5c-bf32-4b77-ab57-198d9120f3d2)
 
 llmcord supports remote models from:
 - [OpenAI API](https://platform.openai.com/docs/models)

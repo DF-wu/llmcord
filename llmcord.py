@@ -89,10 +89,10 @@ async def model_autocomplete(interaction: discord.Interaction, curr_str: str) ->
     if curr_str == "":
         config = await asyncio.to_thread(get_config)
 
-    choices = [Choice(name=f"○ {model}", value=model) for model in config["models"] if model != curr_model and curr_str.lower() in model.lower()][:24]
-    choices += [Choice(name=f"◉ {curr_model} (current)", value=curr_model)] if curr_str.lower() in curr_model.lower() else []
+    choices = [Choice(name=f"◉ {curr_model} (current)", value=curr_model)] if curr_str.lower() in curr_model.lower() else []
+    choices += [Choice(name=f"○ {model}", value=model) for model in config["models"] if model != curr_model and curr_str.lower() in model.lower()]
 
-    return choices
+    return choices[:25]
 
 
 @discord_bot.event
