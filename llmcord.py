@@ -19,6 +19,20 @@ logging.basicConfig(
 )
 
 VISION_MODEL_TAGS = ("claude", "gemini", "gemma", "gpt-4", "gpt-5", "grok-4", "llama", "llava", "mistral", "o3", "o4", "vision", "vl")
+
+# 從環境變數擴展 VISION_MODEL_TAGS
+def get_extended_vision_model_tags():
+    import os
+    base_tags = list(VISION_MODEL_TAGS)
+    
+    # 從 MY_ADDED_MODEL 環境變數讀取額外的模型標籤（逗號分隔）
+    extra_tags = []
+    if added_model := os.getenv("MY_ADDED_MODEL"):
+        extra_tags.extend([tag.strip() for tag in added_model.split(",") if tag.strip()])
+    
+    # 去重並保持順序
+    final_tags = base_tags + [tag for tag in extra_tags if tag not in base_tags]
+    return tuple(final_tags)
 PROVIDERS_SUPPORTING_USERNAMES = ("openai", "x-ai")
 
 EMBED_COLOR_COMPLETE = discord.Color.dark_green()
@@ -153,7 +167,7 @@ async def on_message(new_msg: discord.Message) -> None:
     extra_query = provider_config.get("extra_query", None)
     extra_body = (provider_config.get("extra_body", None) or {}) | (model_parameters or {}) or None
 
-    accept_images = any(x in provider_slash_model.lower() for x in VISION_MODEL_TAGS)
+    accept_images = any(x in provider_slash_model.lower() for x in get_extended_vision_model_tags())
     accept_usernames = any(x in provider_slash_model.lower() for x in PROVIDERS_SUPPORTING_USERNAMES)
 
     max_text = config.get("max_text", 100000)

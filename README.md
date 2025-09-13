@@ -53,6 +53,7 @@ Or run local models with:
 
 ### And more:
 - Supports image attachments when using a vision model (like gpt-5, grok-4, claude-4, etc.)
+- **🆕 Dynamic VISION_MODEL_TAGS extension via environment variables** - Easily add support for new multimodal models without code changes
 - Supports text file attachments (.txt, .py, .c, etc.)
 - Customizable personality (aka system prompt)
 - User identity aware (OpenAI API and xAI API only)
@@ -74,25 +75,47 @@ git clone https://github.com/jakobdylanc/llmcord
 
 ### Discord settings:
 
-| Setting | Description |
-| --- | --- |
-| **bot_token** | Create a new Discord bot at [discord.com/developers/applications](https://discord.com/developers/applications) and generate a token under the "Bot" tab. Also enable "MESSAGE CONTENT INTENT". |
-| **client_id** | Found under the "OAuth2" tab of the Discord bot you just made. |
-| **status_message** | Set a custom message that displays on the bot's Discord profile.<br /><br />**Max 128 characters.** |
-| **max_text** | The maximum amount of text allowed in a single message, including text from file attachments. (Default: `100,000`) |
-| **max_images** | The maximum number of image attachments allowed in a single message. (Default: `5`)<br /><br />**Only applicable when using a vision model.** |
-| **max_messages** | The maximum number of messages allowed in a reply chain. When exceeded, the oldest messages are dropped. (Default: `25`) |
-| **use_plain_responses** | When set to `true` the bot will use plaintext responses instead of embeds. Plaintext responses have a shorter character limit so the bot's messages may split more often. (Default: `false`)<br /><br />**Also disables streamed responses and warning messages.** |
-| **allow_dms** | Set to `false` to disable direct message access. (Default: `true`) |
-| **permissions** | Configure access permissions for `users`, `roles` and `channels`, each with a list of `allowed_ids` and `blocked_ids`.<br /><br />Control which `users` are admins with `admin_ids`. Admins can change the model with `/model` and DM the bot even if `allow_dms` is `false`.<br /><br />**Leave `allowed_ids` empty to allow ALL in that category.**<br /><br />**Role and channel permissions do not affect DMs.**<br /><br />**You can use [category](https://support.discord.com/hc/en-us/articles/115001580171-Channel-Categories-101) IDs to control channel permissions in groups.** |
+| Setting                 | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **bot_token**           | Create a new Discord bot at [discord.com/developers/applications](https://discord.com/developers/applications) and generate a token under the "Bot" tab. Also enable "MESSAGE CONTENT INTENT".                                                                                                                                                                                                                                                                                                                                                                                              |
+| **client_id**           | Found under the "OAuth2" tab of the Discord bot you just made.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **status_message**      | Set a custom message that displays on the bot's Discord profile.<br /><br />**Max 128 characters.**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| **max_text**            | The maximum amount of text allowed in a single message, including text from file attachments. (Default: `100,000`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **max_images**          | The maximum number of image attachments allowed in a single message. (Default: `5`)<br /><br />**Only applicable when using a vision model.**                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **max_messages**        | The maximum number of messages allowed in a reply chain. When exceeded, the oldest messages are dropped. (Default: `25`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| **use_plain_responses** | When set to `true` the bot will use plaintext responses instead of embeds. Plaintext responses have a shorter character limit so the bot's messages may split more often. (Default: `false`)<br /><br />**Also disables streamed responses and warning messages.**                                                                                                                                                                                                                                                                                                                          |
+| **allow_dms**           | Set to `false` to disable direct message access. (Default: `true`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **permissions**         | Configure access permissions for `users`, `roles` and `channels`, each with a list of `allowed_ids` and `blocked_ids`.<br /><br />Control which `users` are admins with `admin_ids`. Admins can change the model with `/model` and DM the bot even if `allow_dms` is `false`.<br /><br />**Leave `allowed_ids` empty to allow ALL in that category.**<br /><br />**Role and channel permissions do not affect DMs.**<br /><br />**You can use [category](https://support.discord.com/hc/en-us/articles/115001580171-Channel-Categories-101) IDs to control channel permissions in groups.** |
 
 ### LLM settings:
 
-| Setting | Description |
-| --- | --- |
-| **providers** | Add the LLM providers you want to use, each with a `base_url` and optional `api_key` entry. Popular providers (`openai`, `ollama`, etc.) are already included.<br /><br />**Only supports OpenAI compatible APIs.**<br /><br />**Some providers may need `extra_headers` / `extra_query` / `extra_body` entries for extra HTTP data. See the included `azure-openai` provider for an example.** |
-| **models** | Add the models you want to use in `<provider>/<model>: <parameters>` format (examples are included). When you run `/model` these models will show up as autocomplete suggestions.<br /><br />**Refer to each provider's documentation for supported parameters.**<br /><br />**The first model in your `models` list will be the default model at startup.**<br /><br />**Some vision models may need `:vision` added to the end of their name to enable image support.** |
-| **system_prompt** | Write anything you want to customize the bot's behavior!<br /><br />**Leave blank for no system prompt.**<br /><br />**You can use the `{date}` and `{time}` tags in your system prompt to insert the current date and time, based on your host computer's time zone.** |
+| Setting           | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **providers**     | Add the LLM providers you want to use, each with a `base_url` and optional `api_key` entry. Popular providers (`openai`, `ollama`, etc.) are already included.<br /><br />**Only supports OpenAI compatible APIs.**<br /><br />**Some providers may need `extra_headers` / `extra_query` / `extra_body` entries for extra HTTP data. See the included `azure-openai` provider for an example.**                                                                           |
+| **models**        | Add the models you want to use in `<provider>/<model>: <parameters>` format (examples are included). When you run `/model` these models will show up as autocomplete suggestions.<br /><br />**Refer to each provider's documentation for supported parameters.**<br /><br />**The first model in your `models` list will be the default model at startup.**<br /><br />**Some vision models may need `:vision` added to the end of their name to enable image support.** |
+| **system_prompt** | Write anything you want to customize the bot's behavior!<br /><br />**Leave blank for no system prompt.**<br /><br />**You can use the `{date}` and `{time}` tags in your system prompt to insert the current date and time, based on your host computer's time zone.**                                                                                                                                                                                                   |
+
+### 🆕 Dynamic VISION_MODEL_TAGS Extension
+
+This forked version supports extending `VISION_MODEL_TAGS` dynamically through the `MY_ADDED_MODEL` environment variable, allowing you to easily add support for new multimodal models without code changes.
+
+#### Usage:
+
+```bash
+MY_ADDED_MODEL="glm-4.5v,qwen-vl,custom-vision" docker-compose up -d
+```
+
+**Using .env file:**
+```bash
+echo "MY_ADDED_MODEL=glm-4.5v,qwen-vl" > .env
+docker-compose --env-file .env up -d
+```
+
+#### Base VISION_MODEL_TAGS:
+The following vision model tags are included by default:
+- `claude`, `gemini`, `gemma`, `gpt-4`, `gpt-5`, `grok-4`, `llama`, `llava`, `mistral`, `o3`, `o4`, `vision`, `vl`
+
+Environment variable tags are automatically appended to the base tags, with duplicate tags automatically removed.
 
 3. Run the bot:
 

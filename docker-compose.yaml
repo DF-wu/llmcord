@@ -5,3 +5,9 @@ services:
     restart: unless-stopped
     volumes:
       - ./:/app:ro
+    environment:
+      # 支援環境變數擴展 VISION_MODEL_TAGS
+      # 使用方式1: MY_ADDED_MODEL="glm-4.5v,qwen-vl,custom-vision"
+      # 使用方式2: VISION_MODEL_TAGS_EXTRA="glm-4.5v qwen-vl custom-vision"
+      - MY_ADDED_MODEL=${MY_ADDED_MODEL:-}
+      - VISION_MODEL_TAGS_EXTRA=${VISION_MODEL_TAGS_EXTRA:-}

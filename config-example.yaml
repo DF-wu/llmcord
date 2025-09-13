@@ -1,8 +1,8 @@
 # Discord settings:
 
-bot_token: 
-client_id: 
-status_message: 
+bot_token:
+client_id:
+status_message:
 
 max_text: 100000
 max_images: 5
@@ -10,6 +10,26 @@ max_messages: 25
 
 use_plain_responses: false
 allow_dms: true
+
+# VISION_MODEL_TAGS 擴展功能說明
+# ===================================
+#
+# 此專案支援通過 MY_ADDED_MODEL 環境變數動態擴展 VISION_MODEL_TAGS，讓您可以輕鬆添加新的多模態模型支援。
+#
+# 使用方式：
+#   MY_ADDED_MODEL="glm-4.5v,qwen-vl,custom-vision"
+#
+# Docker Compose 使用示例：
+#   MY_ADDED_MODEL="glm-4.5v" docker-compose up -d
+#
+# 或創建 .env 文件：
+#   echo "MY_ADDED_MODEL=glm-4.5v,qwen-vl" > .env
+#   docker-compose --env-file .env up -d
+#
+# 基礎的 VISION_MODEL_TAGS 包含：
+#   claude, gemini, gemma, gpt-4, gpt-5, grok-4, llama, llava, mistral, o3, o4, vision, vl
+#
+# 環境變數中指定的標籤會自動追加到基礎標籤後面，重複的標籤會被自動去重。
 
 permissions:
   users:
@@ -23,34 +43,33 @@ permissions:
     allowed_ids: []
     blocked_ids: []
 
-
 # LLM settings:
 
 providers:
   # Remote providers:
   azure-openai:
     base_url: https://<resource name>.openai.azure.com/openai/deployments/<deployment name>
-    api_key: 
+    api_key:
     extra_query:
       api-version: 2024-12-01-preview
   google:
     base_url: https://generativelanguage.googleapis.com/v1beta/openai
-    api_key: 
+    api_key:
   groq:
     base_url: https://api.groq.com/openai/v1
-    api_key: 
+    api_key:
   mistral:
     base_url: https://api.mistral.ai/v1
-    api_key: 
+    api_key:
   openai:
     base_url: https://api.openai.com/v1
-    api_key: 
+    api_key:
   openrouter:
     base_url: https://openrouter.ai/api/v1
-    api_key: 
+    api_key:
   x-ai:
     base_url: https://api.x.ai/v1
-    api_key: 
+    api_key:
 
   # Local providers:
   lmstudio:
