@@ -163,9 +163,9 @@ async def on_message(new_msg: discord.Message) -> None:
 
     model_parameters = config["models"].get(provider_slash_model, None)
 
-    extra_headers = provider_config.get("extra_headers", None)
-    extra_query = provider_config.get("extra_query", None)
-    extra_body = (provider_config.get("extra_body", None) or {}) | (model_parameters or {}) or None
+    extra_headers = provider_config.get("extra_headers")
+    extra_query = provider_config.get("extra_query")
+    extra_body = (provider_config.get("extra_body") or {}) | (model_parameters or {}) or None
 
     accept_images = any(x in provider_slash_model.lower() for x in get_extended_vision_model_tags())
     accept_usernames = any(x in provider_slash_model.lower() for x in PROVIDERS_SUPPORTING_USERNAMES)
@@ -257,7 +257,7 @@ async def on_message(new_msg: discord.Message) -> None:
 
     logging.info(f"Message received (user ID: {new_msg.author.id}, attachments: {len(new_msg.attachments)}, conversation length: {len(messages)}):\n{new_msg.content}")
 
-    if system_prompt := config["system_prompt"]:
+    if system_prompt := config.get("system_prompt"):
         now = datetime.now().astimezone()
 
         system_prompt = system_prompt.replace("{date}", now.strftime("%B %d %Y")).replace("{time}", now.strftime("%H:%M:%S %Z%z")).strip()
