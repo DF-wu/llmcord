@@ -24,14 +24,14 @@ jobs:
       # syuc upstream changes
       # doc: https://github.com/marketplace/actions/upstream-sync
 
-      - name: Sync upstream changes
-        id: sync
-        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
-        with:
-          target_sync_branch: main
-          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
-          upstream_sync_repo: jakobdylanc/llmcord
-          upstream_sync_branch: main
+      # - name: Sync upstream changes
+      #   id: sync
+      #   uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
+      #   with:
+      #     target_sync_branch: main
+      #     target_repo_token: ${{ secrets.GITHUB_TOKEN }}
+      #     upstream_sync_repo: jakobdylanc/llmcord
+      #     upstream_sync_branch: main
           # 其他可選參數請參考官方文件
 
       # Step 3: Display a sample message based on the sync output var 'has_new_commits'
